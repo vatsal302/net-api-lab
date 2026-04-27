@@ -77,8 +77,8 @@ export function useSimulation() {
 
   const log = useCallback((entry: Omit<LogEntry, "id" | "ts">) => {
     setLogs((l) => {
-      const next = [{ id: uid(), ts: Date.now(), ...entry }, ...l];
-      return next.slice(0, 200);
+      const next = [...l, { id: uid(), ts: Date.now(), ...entry }];
+      return next.length > 200 ? next.slice(next.length - 200) : next;
     });
   }, []);
 
