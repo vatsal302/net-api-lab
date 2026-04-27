@@ -99,23 +99,32 @@ export function useSimulation() {
       const expectedMs = s.scenario === "timeout" ? 5000 : duration;
 
       const getLatencyText = (l: number) => {
-        if (l < 400) return `${l} ms (Normal)`;
+        if (l < 400) return `${l} ms (Good response time)`;
         if (l < 800) return `${l} ms (High delay)`;
         if (l < 1500) return `${l} ms (Very high)`;
-        return `${l} ms (Extreme)`;
+        return `${l} ms (Extreme delay)`;
       };
 
       const getLossText = (l: number) => {
-        if (l === 0) return `0% (Perfect connection)`;
-        if (l <= 10) return `${l}% (Stable connection)`;
-        if (l <= 30) return `${l}% (Minor issues possible)`;
-        return `${l}% (Unstable connection)`;
+        if (l === 0) return `0% (Perfect)`;
+        if (l <= 10) return `${l}% (Minor interruptions possible)`;
+        if (l <= 20) return `${l}% (Low impact)`;
+        if (l <= 40) return `${l}% (Unstable)`;
+        return `${l}% (Severe data loss)`;
       };
 
       const getBandwidthText = (bw: string) => {
         if (bw === "fast") return "Fast (Optimal speed)";
-        if (bw === "medium") return "Medium (Average speed)";
-        return "Slow (Reduced speed)";
+        if (bw === "medium") return "Medium (Normal speed)";
+        return "Slow (Limited speed)";
+      };
+      
+      const getConnectionStableText = (loss: number, lat: number) => {
+        if (loss === 0 && lat < 500) return "Yes";
+        if (loss <= 10 && lat < 1000) return "Mostly stable";
+        if (loss > 40) return "No";
+        if (loss > 20 || lat > 1500) return "Unstable";
+        return "Weak";
       };
 
       const networkStatus = `Network Status:
@@ -123,11 +132,20 @@ Latency: ${getLatencyText(s.latency)}
 Bandwidth: ${getBandwidthText(s.bandwidth)}
 Packet Loss: ${getLossText(s.packetLoss)}`;
 
+      const connectionStatus = `Connection Status:
+Server Reachable: Yes
+Connection Stable: ${getConnectionStableText(s.packetLoss, s.latency)}`;
+
+      const requestDetails = `Request Details:
+Request Type: ${method}
+Endpoint: ${url}
+Payload Size: Small`;
+
       log({
         level: "info",
         method,
         url,
-        message: `Request Sent\nConnecting to server...\n\n${networkStatus}\n\nProcessing request...\nFetching data...`,
+        message: `Request Started\nEstablishing connection to server...\n\n${connectionStatus}\n\n${networkStatus}\n\n${requestDetails}\n\nProcessing request...\nFetching data...`,
       });
 
       setPending((p) => [...p, { id, url, startedAt: Date.now(), expectedMs }]);
@@ -144,7 +162,7 @@ Packet Loss: ${getLossText(s.packetLoss)}`;
               url,
               status: "ERR",
               durationMs: duration,
-              message: `⚠ Network instability detected\n\n✔ Request Partially Completed\nSome data could not be loaded\n\nData Integrity: ${Math.max(0, 100 - s.packetLoss)}%\n\nStatus: Partial Success`,
+              message: `⚠ Unstable network detected\nData packets are being lost\n\n✔ Request Partially Completed\n\nStatus: Partial Success\nResponse Time: ${duration} ms\n\nData Integrity:\nOnly partial data received (approx. ${Math.max(10, 100 - s.packetLoss)}%)\n\nUser Experience:\nSome content missing or broken\n\nFinal Result:\nSome posts failed to load\nRetry recommended`,
             });
             return resolve({ ok: false, status: "ERR", durationMs: duration, packetLost: true });
           }
@@ -156,7 +174,7 @@ Packet Loss: ${getLossText(s.packetLoss)}`;
               url,
               status: "TIMEOUT",
               durationMs: 5000,
-              message: `⌛ Request Timed Out\n\nThe server took too long to respond\nThis may be due to high latency\n\nFinal Result:\nConnection aborted\n[ Retry ]`,
+              message: `⌛ Waiting for server response...\n\nResponse taking too long...\n\n✖ Request Timed Out\n\nReason:\nServer did not respond within time limit\n\nUser Experience:\nNo content loaded due to delay`,
             });
             return resolve({ ok: false, status: "TIMEOUT", durationMs: 5000, packetLost: false });
           }
@@ -167,7 +185,7 @@ Packet Loss: ${getLossText(s.packetLoss)}`;
               url,
               status: 404,
               durationMs: duration,
-              message: `✖ Request Failed\nStatus Code: 404 Not Found\n\nResource missing on server\n\nFinal Result:\nData unavailable\n[ Retry ]`,
+              message: `✖ Request Failed\nStatus Code: 404 Not Found\n\nError Details:\nResource missing on server\n\nUser Experience:\nContent could not be found\n\nFinal Result:\nNo data available\nPlease try again\n\n[ Retry ]`,
             });
             return resolve({ ok: false, status: 404, durationMs: duration, packetLost: false });
           }
@@ -178,7 +196,7 @@ Packet Loss: ${getLossText(s.packetLoss)}`;
               url,
               status: 500,
               durationMs: duration,
-              message: `✖ Request Failed\nStatus Code: 500 Server Error\n\nPossible reasons:\n- Server issue\n- Poor network conditions\n\nFinal Result:\nServer failed to respond\n[ Retry ]`,
+              message: `✖ Request Failed\nStatus Code: 500 Server Error\n\nError Details:\nServer encountered an unexpected issue\n\nPossible Causes:\n- Server overload\n- Internal server failure\n- Poor network conditions\n\nUser Experience:\nContent could not be loaded\n\nFinal Result:\nNo data available\nPlease try again\n\n[ Retry ]`,
             });
             return resolve({ ok: false, status: 500, durationMs: duration, packetLost: false });
           }
@@ -190,7 +208,7 @@ Packet Loss: ${getLossText(s.packetLoss)}`;
               url,
               status: 200,
               durationMs: duration,
-              message: `⚠ Slow network detected\nLoading may take longer than expected\n\n✔ Request Completed\nStatus Code: 200 OK\nResponse Time: ${duration} ms\n\nData Integrity: 100%\n\nFinal Result:\nContent loaded with delay\nUser may experience slow performance`,
+              message: `⚠ Slow network detected\nLoading may take longer than expected\n\n✔ Request Completed\nStatus Code: 200 OK\nResponse Time: ${duration} ms\n\nData Integrity:\nAll data received correctly\n\nUser Experience:\nNoticeable delay before content appears\n\nFinal Result:\nContent loaded successfully but slowly`,
             });
           } else {
             log({
@@ -199,7 +217,7 @@ Packet Loss: ${getLossText(s.packetLoss)}`;
               url,
               status: 200,
               durationMs: duration,
-              message: `✔ Request Completed\nStatus Code: 200 OK\nResponse Time: ${duration} ms\n\nData Integrity: 100%\n\nFinal Result:\nContent loaded optimally\nUser experience is smooth`,
+              message: `✔ Request Completed Successfully\nStatus Code: 200 OK\nResponse Time: ${duration} ms\n\nData Integrity:\nAll data received correctly (100%)\n\nUser Experience:\nFast and smooth loading\nNo visible issues\n\nFinal Result:\nAll posts loaded successfully\nDisplaying latest content`,
             });
           }
           resolve({ ok: true, status: 200, durationMs: duration, packetLost: false });
