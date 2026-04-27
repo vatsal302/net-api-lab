@@ -79,12 +79,12 @@ function Lab() {
           </div>
 
           {/* Center: App Preview */}
-          <div className="col-span-12 lg:col-span-6">
+          <div className="col-span-12 lg:col-span-4">
             <AppPreview sim={sim} />
           </div>
 
           {/* Right: Console */}
-          <div className="col-span-12 lg:col-span-3">
+          <div className="col-span-12 lg:col-span-5">
             <ConsolePanel sim={sim} />
           </div>
         </div>

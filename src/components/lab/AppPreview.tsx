@@ -1,30 +1,21 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, ImageOff, RefreshCw, Smartphone, Monitor, Wifi, WifiOff } from "lucide-react";
-import type { Simulation, SimResult, Bandwidth } from "@/hooks/useSimulation";
-
-const BANDWIDTH_IMG_DELAY: Record<Bandwidth, number> = {
-  fast: 0,
-  medium: 900,
-  slow: 2200,
-};
+import { useCallback, useEffect, useState } from "react";
+import { AlertTriangle, RefreshCw, Smartphone, Monitor, Wifi, WifiOff, Loader2 } from "lucide-react";
+import type { Simulation, SimResult } from "@/hooks/useSimulation";
 
 type ViewMode = "desktop" | "mobile";
 
 interface FeedItem {
   id: number;
-  user: string;
-  handle: string;
+  title: string;
   text: string;
-  metric: string;
-  imgOk: boolean;
-  imgLoaded: boolean;
+  failedDueToPacketLoss: boolean;
 }
 
-const SAMPLE_DATA: Omit<FeedItem, "imgOk" | "imgLoaded">[] = [
-  { id: 1, user: "Lena Park", handle: "@lpark", text: "Shipped the new caching layer — p99 dropped 40%.", metric: "1.2k" },
-  { id: 2, user: "Diego Alvarez", handle: "@dalv", text: "Reminder: idempotency keys are not optional.", metric: "847" },
-  { id: 3, user: "Mira Okafor", handle: "@miraok", text: "Postmortem published. Lessons in retry storms.", metric: "2.4k" },
-  { id: 4, user: "Sven Holt", handle: "@svenh", text: "Migrated to edge functions. Cold starts ~3ms.", metric: "612" },
+const SAMPLE_DATA: Omit<FeedItem, "failedDueToPacketLoss">[] = [
+  { id: 1, title: "Post 1", text: "This is a simple content block to test API response." },
+  { id: 2, title: "Post 2", text: "Here is another simple post in the feed." },
+  { id: 3, title: "Post 3", text: "Testing latency and packet loss effects on this item." },
+  { id: 4, title: "Post 4", text: "Final post for the feed preview display." },
 ];
 
 type Status = "idle" | "loading" | "success" | "error" | "timeout" | "notfound";
@@ -33,70 +24,28 @@ export function AppPreview({ sim }: { sim: Simulation }) {
   const [view, setView] = useState<ViewMode>("desktop");
   const [status, setStatus] = useState<Status>("idle");
   const [items, setItems] = useState<FeedItem[]>([]);
-  const [errorDetail, setErrorDetail] = useState<string>("");
   const [attempts, setAttempts] = useState(0);
-
-  const imgTimers = useRef<number[]>([]);
-
-  const clearImgTimers = () => {
-    imgTimers.current.forEach((t) => clearTimeout(t));
-    imgTimers.current = [];
-  };
-
-  const scheduleImageLoads = useCallback((data: FeedItem[]) => {
-    clearImgTimers();
-    const baseDelay = BANDWIDTH_IMG_DELAY[sim.bandwidth];
-    data.forEach((it, idx) => {
-      if (!it.imgOk) return; // failed images stay broken until retried
-      // progressive: each image staggered, slower bandwidth = bigger gap
-      const delay = baseDelay === 0 ? 0 : baseDelay + idx * (baseDelay * 0.35);
-      const t = window.setTimeout(() => {
-        setItems((prev) => prev.map((p) => (p.id === it.id ? { ...p, imgLoaded: true } : p)));
-      }, delay);
-      imgTimers.current.push(t);
-    });
-  }, [sim.bandwidth]);
 
   const fetchFeed = useCallback(async () => {
     setStatus("loading");
-    setErrorDetail("");
     setAttempts((a) => a + 1);
-    clearImgTimers();
+    
     const res: SimResult = await sim.simulateRequest("/api/feed", "GET");
 
     if (res.status === 200) {
-      // Apply packet loss to images per item
+      // Apply packet loss to individual posts
       const data: FeedItem[] = SAMPLE_DATA.map((it) => {
-        const imgOk = Math.random() * 100 >= sim.packetLoss * 0.6;
-        return { ...it, imgOk, imgLoaded: false };
+        const failedDueToPacketLoss = Math.random() * 100 < sim.packetLoss;
+        return { ...it, failedDueToPacketLoss };
       });
       setItems(data);
       setStatus("success");
-      scheduleImageLoads(data);
     } else if (res.status === 404) {
       setStatus("notfound");
-      setErrorDetail("Resource /api/feed could not be located on the origin.");
     } else if (res.status === "TIMEOUT") {
       setStatus("timeout");
-      setErrorDetail("Request exceeded the 5000ms timeout threshold.");
-    } else if (res.packetLost) {
-      setStatus("error");
-      setErrorDetail("Network error — packet lost in transit.");
     } else {
       setStatus("error");
-      setErrorDetail("The server encountered an unexpected condition.");
-    }
-  }, [sim, scheduleImageLoads]);
-
-  const retryImage = useCallback(async (id: number) => {
-    sim.log({ level: "info", method: "GET", url: `/api/img/${id}`, message: `↻ retrying image #${id}` });
-    const res = await sim.simulateRequest(`/api/img/${id}`, "GET");
-    const ok = res.status === 200 && !res.packetLost && Math.random() * 100 >= sim.packetLoss * 0.4;
-    setItems((prev) => prev.map((p) => (p.id === id ? { ...p, imgOk: ok, imgLoaded: ok } : p)));
-    if (!ok) {
-      sim.log({ level: "warn", method: "GET", url: `/api/img/${id}`, message: `✕ image #${id} retry failed` });
-    } else {
-      sim.log({ level: "success", method: "GET", url: `/api/img/${id}`, message: `✓ image #${id} recovered` });
     }
   }, [sim]);
 
@@ -109,7 +58,7 @@ export function AppPreview({ sim }: { sim: Simulation }) {
   const isMobile = view === "mobile";
 
   return (
-    <section className="glass rounded-xl overflow-hidden flex flex-col">
+    <section className="glass rounded-xl overflow-hidden flex flex-col h-full min-h-[500px]">
       {/* preview chrome */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border/60 bg-background/40">
         <div className="flex items-center gap-3">
@@ -161,7 +110,7 @@ export function AppPreview({ sim }: { sim: Simulation }) {
       </div>
 
       {/* viewport */}
-      <div className="flex-1 p-6 bg-gradient-to-b from-background/20 to-background/60 min-h-[420px] flex justify-center items-start">
+      <div className="flex-1 p-6 bg-gradient-to-b from-background/20 to-background/60 flex justify-center items-start overflow-y-auto">
         <div
           className={`w-full transition-all duration-300 ${
             isMobile ? "max-w-[320px] border border-border/60 rounded-2xl p-4 bg-card/50" : ""
@@ -169,14 +118,46 @@ export function AppPreview({ sim }: { sim: Simulation }) {
         >
           <FeedHeader />
 
-          {status === "loading" && <SkeletonFeed sim={sim} />}
-          {status === "success" && <FeedList items={items} onRetryImage={retryImage} />}
-          {(status === "error" || status === "notfound" || status === "timeout") && (
-            <ErrorState
-              status={status}
-              detail={errorDetail}
-              onRetry={fetchFeed}
-            />
+          {status === "loading" && (
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+              <Loader2 className="h-8 w-8 animate-spin mb-4" />
+              <p className="text-sm">Loading feed...</p>
+            </div>
+          )}
+          
+          {status === "success" && <FeedList items={items} />}
+          
+          {status === "notfound" && (
+            <div className="text-center py-12 text-warning">
+              <h4 className="text-lg font-bold">Data Not Found (404)</h4>
+              <p className="text-sm mt-2">The requested feed could not be found.</p>
+            </div>
+          )}
+          
+          {status === "error" && (
+            <div className="text-center py-12 text-destructive">
+              <h4 className="text-lg font-bold">Server Error (500)</h4>
+              <p className="text-sm mt-2 mb-4">An error occurred while fetching data.</p>
+              <button
+                onClick={fetchFeed}
+                className="px-4 py-2 bg-destructive/10 text-destructive border border-destructive/30 rounded-md hover:bg-destructive/20 text-sm font-medium"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+          
+          {status === "timeout" && (
+            <div className="text-center py-12 text-destructive">
+              <h4 className="text-lg font-bold">Request Timeout</h4>
+              <p className="text-sm mt-2 mb-4">The server took too long to respond.</p>
+              <button
+                onClick={fetchFeed}
+                className="px-4 py-2 bg-destructive/10 text-destructive border border-destructive/30 rounded-md hover:bg-destructive/20 text-sm font-medium"
+              >
+                Retry
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -204,118 +185,33 @@ function FeedHeader() {
   return (
     <div className="mb-4 pb-3 border-b border-border/40">
       <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">dashboard</div>
-      <h4 className="text-base font-semibold text-foreground mt-0.5">Engineering Feed</h4>
+      <h4 className="text-base font-semibold text-foreground mt-0.5">Content Feed</h4>
     </div>
   );
 }
 
-function SkeletonFeed({ sim }: { sim: Simulation }) {
-  const slow = sim.bandwidth === "slow" || sim.latency > 1000;
+function FeedList({ items }: { items: FeedItem[] }) {
   return (
-    <div className="space-y-3">
-      {[0, 1, 2].map((i) => (
-        <div key={i} className="flex gap-3 p-3 rounded-lg bg-secondary/30 border border-border/40">
-          <div className={`h-9 w-9 rounded-full ${slow ? "shimmer" : "bg-muted animate-pulse"}`} />
-          <div className="flex-1 space-y-2">
-            <div className={`h-2.5 w-1/3 rounded ${slow ? "shimmer" : "bg-muted animate-pulse"}`} />
-            <div className={`h-2 w-full rounded ${slow ? "shimmer" : "bg-muted animate-pulse"}`} />
-            <div className={`h-2 w-4/5 rounded ${slow ? "shimmer" : "bg-muted animate-pulse"}`} />
-          </div>
+    <div className="space-y-4">
+      {items.map((it) => (
+        <div
+          key={it.id}
+          className="p-4 rounded-md bg-secondary/30 border border-border/40"
+        >
+          {it.failedDueToPacketLoss ? (
+            <div className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="text-sm font-medium">Failed to load content due to packet loss</span>
+            </div>
+          ) : (
+            <div>
+              <h5 className="font-semibold text-foreground mb-1">{it.title}</h5>
+              <p className="text-sm text-foreground/80">{it.text}</p>
+            </div>
+          )}
         </div>
       ))}
-      <div className="text-[10px] text-center text-muted-foreground pt-1">
-        loading<span className="terminal-cursor" />
-      </div>
     </div>
   );
 }
 
-function FeedList({ items, onRetryImage }: { items: FeedItem[]; onRetryImage: (id: number) => void }) {
-  return (
-    <ul className="space-y-2.5">
-      {items.map((it) => (
-        <li
-          key={it.id}
-          className="flex gap-3 p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 border border-border/40 hover:border-border transition-all animate-slide-up"
-        >
-          {it.imgOk ? (
-            it.imgLoaded ? (
-              <div
-                className="h-9 w-9 rounded-full shrink-0 flex items-center justify-center text-xs font-bold text-primary-foreground animate-fade-in"
-                style={{ background: `linear-gradient(135deg, oklch(0.7 0.15 ${(it.id * 60) % 360}), oklch(0.6 0.18 ${(it.id * 60 + 40) % 360}))` }}
-              >
-                {it.user.split(" ").map((s) => s[0]).join("")}
-              </div>
-            ) : (
-              <div className="h-9 w-9 rounded-full shrink-0 shimmer" title="image loading…" />
-            )
-          ) : (
-            <button
-              onClick={() => onRetryImage(it.id)}
-              title="retry image"
-              className="h-9 w-9 rounded-full shrink-0 bg-destructive/10 border border-destructive/30 hover:bg-destructive/20 hover:border-destructive/60 flex items-center justify-center transition-all group"
-            >
-              <ImageOff className="h-3.5 w-3.5 text-destructive group-hover:hidden" />
-              <RefreshCw className="h-3.5 w-3.5 text-destructive hidden group-hover:block" />
-            </button>
-          )}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-xs font-semibold text-foreground">{it.user}</span>
-              <span className="text-[10px] text-muted-foreground">{it.handle}</span>
-            </div>
-            <p className="text-xs text-foreground/80 mt-0.5 leading-snug">{it.text}</p>
-            <div className="text-[10px] text-muted-foreground mt-1.5 flex items-center gap-2">
-              <span>♥ {it.metric}</span>
-              {!it.imgOk && (
-                <span className="text-destructive/80">· image failed — click avatar to retry</span>
-              )}
-            </div>
-          </div>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function ErrorState({
-  status,
-  detail,
-  onRetry,
-}: {
-  status: "error" | "notfound" | "timeout";
-  detail: string;
-  onRetry: () => void;
-}) {
-  const config = {
-    error: { code: "500", title: "Server Error", color: "destructive" },
-    notfound: { code: "404", title: "Not Found", color: "warning" },
-    timeout: { code: "⛔", title: "Request Timeout", color: "destructive" },
-  }[status];
-
-  const tone = config.color;
-
-  return (
-    <div className="text-center py-8 animate-fade-in">
-      <div
-        className="mx-auto h-16 w-16 rounded-full flex items-center justify-center mb-4 border"
-        style={{
-          backgroundColor: `color-mix(in oklab, var(--${tone}) 12%, transparent)`,
-          borderColor: `color-mix(in oklab, var(--${tone}) 35%, transparent)`,
-          boxShadow: `0 0 25px color-mix(in oklab, var(--${tone}) 45%, transparent)`,
-        }}
-      >
-        <AlertTriangle className="h-7 w-7" style={{ color: `var(--${tone})` }} />
-      </div>
-      <div className="text-3xl font-bold tabular-nums" style={{ color: `var(--${tone})` }}>{config.code}</div>
-      <div className="text-sm font-semibold text-foreground mt-1">{config.title}</div>
-      <p className="text-xs text-muted-foreground mt-2 max-w-xs mx-auto">{detail}</p>
-      <button
-        onClick={onRetry}
-        className="mt-5 inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-md bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 hover:border-primary/60 transition-all"
-      >
-        <RefreshCw className="h-3 w-3" /> retry request
-      </button>
-    </div>
-  );
-}
