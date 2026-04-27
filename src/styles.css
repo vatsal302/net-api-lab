@@ -1,0 +1,211 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-display: "Space Grotesk", "Inter", sans-serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-grid: var(--grid);
+
+  --animate-shimmer: shimmer 2s linear infinite;
+  --animate-pulse-glow: pulse-glow 2s ease-in-out infinite;
+  --animate-blink: blink 1s steps(2, start) infinite;
+  --animate-scan: scan 3s linear infinite;
+  --animate-fade-in: fade-in 0.3s ease-out;
+  --animate-slide-up: slide-up 0.25s ease-out;
+}
+
+:root {
+  --radius: 0.625rem;
+
+  /* Yellowish-green dev console */
+  --background: oklch(0.22 0.06 125);
+  --foreground: oklch(0.96 0.04 115);
+
+  --card: oklch(0.26 0.07 125);
+  --card-foreground: oklch(0.96 0.04 115);
+
+  --popover: oklch(0.24 0.065 125);
+  --popover-foreground: oklch(0.96 0.04 115);
+
+  /* Lime/chartreuse primary */
+  --primary: oklch(0.85 0.19 120);
+  --primary-foreground: oklch(0.18 0.05 125);
+
+  --secondary: oklch(0.32 0.07 125);
+  --secondary-foreground: oklch(0.96 0.04 115);
+
+  --muted: oklch(0.3 0.06 125);
+  --muted-foreground: oklch(0.72 0.06 115);
+
+  /* Warm yellow accent */
+  --accent: oklch(0.85 0.17 95);
+  --accent-foreground: oklch(0.18 0.05 125);
+
+  --destructive: oklch(0.65 0.22 25);
+  --destructive-foreground: oklch(0.98 0.01 240);
+
+  --success: oklch(0.78 0.2 140);
+  --warning: oklch(0.83 0.17 90);
+  --info: oklch(0.78 0.13 175);
+
+  --border: oklch(0.4 0.06 125 / 0.6);
+  --input: oklch(0.32 0.06 125);
+  --ring: oklch(0.85 0.19 120);
+
+  --grid: oklch(0.4 0.06 125 / 0.4);
+
+  --gradient-bg: radial-gradient(ellipse at top, oklch(0.32 0.09 115) 0%, oklch(0.18 0.05 125) 60%);
+  --gradient-primary: linear-gradient(135deg, oklch(0.85 0.19 120), oklch(0.82 0.18 95));
+  --gradient-card: linear-gradient(180deg, oklch(0.28 0.07 125 / 0.6), oklch(0.22 0.06 125 / 0.4));
+
+  --glow-primary: 0 0 40px oklch(0.78 0.16 195 / 0.35);
+  --glow-success: 0 0 30px oklch(0.72 0.18 150 / 0.4);
+  --glow-destructive: 0 0 30px oklch(0.65 0.22 25 / 0.45);
+
+  --shadow-card: 0 8px 32px -8px oklch(0 0 0 / 0.5), inset 0 1px 0 oklch(1 0 0 / 0.05);
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; box-shadow: 0 0 20px var(--primary); }
+  50% { opacity: 0.6; box-shadow: 0 0 8px var(--primary); }
+}
+@keyframes blink {
+  to { visibility: hidden; }
+}
+@keyframes scan {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html, body {
+    font-family: var(--font-mono);
+  }
+
+  body {
+    background: var(--gradient-bg);
+    background-attachment: fixed;
+    color: var(--color-foreground);
+    min-height: 100vh;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+    mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+  }
+}
+
+@layer utilities {
+  .glass {
+    background: var(--gradient-card);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-card);
+  }
+
+  .glow-primary { box-shadow: var(--glow-primary); }
+  .glow-success { box-shadow: var(--glow-success); }
+  .glow-destructive { box-shadow: var(--glow-destructive); }
+
+  .text-gradient {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      oklch(0.28 0.025 250) 0%,
+      oklch(0.36 0.03 250) 50%,
+      oklch(0.28 0.025 250) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.8s linear infinite;
+  }
+
+  .scanline {
+    position: relative;
+    overflow: hidden;
+  }
+  .scanline::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      180deg,
+      transparent,
+      oklch(0.78 0.16 195 / 0.08),
+      transparent
+    );
+    animation: scan 3s linear infinite;
+    pointer-events: none;
+  }
+
+  .terminal-cursor::after {
+    content: "▋";
+    color: var(--primary);
+    animation: blink 1s steps(2, start) infinite;
+    margin-left: 2px;
+  }
+}
