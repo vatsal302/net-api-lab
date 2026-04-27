@@ -4,7 +4,10 @@ import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { routeTree } from './routeTree.gen'
 import './styles.css'
 
-const router = createRouter({ routeTree })
+const router = createRouter({ 
+  routeTree,
+  basepath: '/net-api-lab'
+})
 
 declare module '@tanstack/react-router' {
   interface Register {
