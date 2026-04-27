@@ -102,7 +102,7 @@ export function useSimulation() {
         level: "info",
         method,
         url,
-        message: `→ request dispatched · scenario=${SCENARIO_LABEL[s.scenario]} · est ${expectedMs}ms`,
+        message: "Request sent...",
       });
 
       setPending((p) => [...p, { id, url, startedAt: Date.now(), expectedMs }]);
@@ -119,7 +119,7 @@ export function useSimulation() {
               url,
               status: "ERR",
               durationMs: duration,
-              message: `✕ packet lost (${s.packetLoss}% loss rate)`,
+              message: `Request failed (Packet loss)\nLoaded in ${duration} ms`,
             });
             return resolve({ ok: false, status: "ERR", durationMs: duration, packetLost: true });
           }
@@ -131,7 +131,7 @@ export function useSimulation() {
               url,
               status: "TIMEOUT",
               durationMs: 5000,
-              message: `⛔ request timed out after 5000ms`,
+              message: `Request failed (TIMEOUT)\nLoaded in 5000 ms`,
             });
             return resolve({ ok: false, status: "TIMEOUT", durationMs: 5000, packetLost: false });
           }
@@ -142,7 +142,7 @@ export function useSimulation() {
               url,
               status: 404,
               durationMs: duration,
-              message: `404 Not Found · ${duration}ms`,
+              message: `Response received with error (404 Not Found)\nLoaded in ${duration} ms`,
             });
             return resolve({ ok: false, status: 404, durationMs: duration, packetLost: false });
           }
@@ -153,7 +153,7 @@ export function useSimulation() {
               url,
               status: 500,
               durationMs: duration,
-              message: `💥 500 Internal Server Error · ${duration}ms`,
+              message: `Response received with error (500 Internal Server Error)\nLoaded in ${duration} ms`,
             });
             return resolve({ ok: false, status: 500, durationMs: duration, packetLost: false });
           }
@@ -164,7 +164,7 @@ export function useSimulation() {
             url,
             status: 200,
             durationMs: duration,
-            message: `✓ 200 OK · ${duration}ms`,
+            message: `Response received successfully (200 OK)\nLoaded in ${duration} ms`,
           });
           resolve({ ok: true, status: 200, durationMs: duration, packetLost: false });
         }, expectedMs);

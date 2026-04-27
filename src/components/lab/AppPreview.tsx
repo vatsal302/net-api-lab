@@ -49,11 +49,7 @@ export function AppPreview({ sim }: { sim: Simulation }) {
     }
   }, [sim]);
 
-  // initial fetch on mount
-  useEffect(() => {
-    fetchFeed();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+
 
   const isMobile = view === "mobile";
 
@@ -93,7 +89,7 @@ export function AppPreview({ sim }: { sim: Simulation }) {
             className="px-2.5 py-1 text-[10px] rounded-md bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-all disabled:opacity-50"
           >
             <RefreshCw className={`h-3 w-3 inline ${status === "loading" ? "animate-spin" : ""}`} />
-            <span className="ml-1">refetch</span>
+            <span className="ml-1">Generate Output</span>
           </button>
         </div>
       </div>
@@ -117,6 +113,19 @@ export function AppPreview({ sim }: { sim: Simulation }) {
           }`}
         >
           <FeedHeader />
+
+          {status === "idle" && (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <h4 className="text-lg font-medium text-foreground mb-2">Ready to Simulate</h4>
+              <p className="text-sm text-muted-foreground mb-6">Press the button below to generate output using the current network settings.</p>
+              <button
+                onClick={fetchFeed}
+                className="px-6 py-2.5 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 flex items-center gap-2"
+              >
+                <RefreshCw className="h-4 w-4" /> Generate Output
+              </button>
+            </div>
+          )}
 
           {status === "loading" && (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">

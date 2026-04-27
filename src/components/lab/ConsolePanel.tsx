@@ -71,13 +71,13 @@ export function ConsolePanel({ sim }: { sim: Simulation }) {
 
             return (
               <div key={log.id} className="flex flex-col gap-1 animate-fade-in hover:bg-secondary/30 rounded p-2 transition-colors border border-transparent hover:border-border/50">
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground/60 tabular-nums shrink-0 text-xs">[{fmtTime(log.ts)}]</span>
-                  <span className={`shrink-0 uppercase font-bold text-xs ${LEVEL_COLOR[log.level]}`}>
+                <div className="flex items-start gap-2">
+                  <span className="text-muted-foreground/60 tabular-nums shrink-0 text-xs mt-0.5">[{fmtTime(log.ts)}]</span>
+                  <span className={`shrink-0 uppercase font-bold text-xs mt-0.5 ${LEVEL_COLOR[log.level]}`}>
                     {log.level}
                   </span>
-                  {statusBadge}
-                  <span className="text-foreground/90 font-medium">{log.message}</span>
+                  {statusBadge && <div className="mt-0.5">{statusBadge}</div>}
+                  <span className="text-foreground/90 font-medium whitespace-pre-wrap leading-relaxed">{log.message}</span>
                 </div>
                 {log.url && log.method !== "SYS" && (
                   <div className="text-muted-foreground text-xs ml-20 flex gap-2">
