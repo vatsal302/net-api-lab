@@ -79,12 +79,7 @@ export function ConsolePanel({ sim }: { sim: Simulation }) {
                   {statusBadge && <div className="mt-0.5">{statusBadge}</div>}
                   <span className="text-foreground/90 font-medium whitespace-pre-wrap leading-relaxed">{log.message}</span>
                 </div>
-                {log.url && log.method !== "SYS" && (
-                  <div className="text-muted-foreground text-xs ml-20 flex gap-2">
-                    <span className="text-accent font-semibold">{log.method}</span>
-                    <span>{log.url}</span>
-                  </div>
-                )}
+
               </div>
             );
           })
